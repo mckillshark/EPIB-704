@@ -1,0 +1,51 @@
+# a and b-----
+
+set.seed(9)
+data <- list()
+logres <- list()
+RRestimate <- list()
+for (i in 1:1000) {
+  E <- rbinom(250, 1, 0.25)
+  A <- rbinom(250, 1, 0.75)
+  Y <- ifelse(E==0 & A ==0,
+              rbinom(250, 1, 0.1), 
+              ifelse(E==0 & A==1, rbinom(250, 1, 0.25),
+                     ifelse(E==1 & A==0, rbinom(250, 1, 0.25),
+                            rbinom(250, 1, 0.625))))
+  data[[i]] <- data.frame(E,A,Y)
+  logres[[i]] <- logisticRR(Y ~ A, data = data[[i]])
+  RRestimate[[i]] <- logres[[i]]$RR
+}
+
+RRunlist <- unlist(RRestimate)
+
+quantile(RRunlist, c(0.25,0.50,0.95))
+
+# c -----
+logres2 <- list()
+RRestimate2 <- list()
+for (i in 1:1000) {
+  logres2[[i]] <- logisticRR(Y ~ A +E, data = data[[i]])
+  RRestimate2[[i]] <- logres2[[i]]$RR
+}
+
+RRunlist2 <- unlist(RRestimate2)
+quantile(RRunlist2, c(0.25,0.5,0.95))
+
+# d -----
+
+confounder1 <- abs(log(RRcrude/RRadjusted))
+confounder2 <- ifelse(confounder1 > 0.1, 1, 0)
+table(confounder2)
+
+# e ----
+
+boxplot(RRcrude, RRadjusted, names = c("Crude","Adjusted"),
+        horizontal = TRUE)
+
+# f) ----
+library(MLmetrics)
+MSE(log(RRcrude), log(2.43)) # 0.14
+MSE(log(RRadjusted), log(2.43)) #0.25
+
+# The crude RR estimate is better- less error
