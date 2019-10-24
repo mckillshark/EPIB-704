@@ -1,3 +1,79 @@
+# A) AND B)
+install.packages("logbin", repos="http://cran.us.r-project.org")
+library(logbin) #package that produces the OR, but can exponentiate coefficients to get RR
+RRestimate1 <- vector("numeric") # crude RR
+RRestimate2 <- vector("numeric") # adjusted RR
+for (i in 1:1000) {
+  set.seed(49+i)
+  E <- rbinom(250, 1, 0.25)
+  A <- rbinom(250, 1, 0.75)
+  Y <- ifelse(E==0 & A ==0, rbinom(250, 1, 0.1), 
+              ifelse(E==0 & A==1, rbinom(250, 1, 0.25),
+                     ifelse(E==1 & A==0, rbinom(250, 1, 0.25),
+                            rbinom(250, 1, 0.625))))
+  RR1 <- (table(A,Y)[2,2]/(table(A,Y)[2,1]+table(A,Y)[2,2]))/(table(A,Y)[1,2]/(table(A,Y)[1,1]+table(A,Y)[1,2]))
+  RRestimate1[i] <- RR1 # crude RR
+  data <- data.frame(E,A,Y)
+  logbin <- logbin(Y ~ A + E)
+  RRestimate2[i] <- exp(logbin[[1]][2]) # adjusted RR
+}
+
+quantile(RRestimate1, c(0.05,0.5,0.95)) # gets the percentile estimates of the crude RRs
+
+# C)------
+
+quantile(RRestimate2, c(0.05,0.5,0.95)) # gets the percentile estimates of the adjusted RRs
+
+# D) ------
+
+Diff <- abs(log(RRestimate1/RRestimate2)) # crude / adjusted (code in part A))
+Num <- length(which(Diff>=0.10))
+Num
+
+# See other code below for another way of computing this part.
+
+F)-----
+install.packages("MLmetrics", repos="http://cran.us.r-project.org")
+library(MLmetrics)
+MSE(log(RRestimate1), log(2.5)) # crude
+MSE(log(RRestimate2), log(2.5)) # adjusted
+
+# computes the mean squared error which tells you the deviation from the true/expected value
+
+H)-----
+RERIs <- vector("numeric")
+for (i in 1:1000){
+  set.seed(10+i)
+  E <- rbinom(250,1,0.25)
+  A <- rbinom(250,1,0.75)
+  Y <- ifelse(E==0&A==0,rbinom(250,1,0.1),
+              ifelse(E==0&A==1,rbinom(250,1,0.25),
+                     ifelse(E==1&A==0,rbinom(250,1,0.25),
+                            rbinom(250,1,0.625))))
+  data2<-data.frame(A,E,Y)
+  E1A1 <- subset(data2, E==1 & A==1)
+  E1A0 <- subset(data2, E==1 & A==0)
+  E0A1 <- subset(data2, E==0 & A==1)
+  E0A0 <- subset(data2, E==0 & A==0)
+  p11 <- sum(E1A1$Y)/length(E1A1$Y)
+  p10 <- sum(E1A0$Y)/length(E1A0$Y) 
+  p01 <- sum(E0A1$Y)/length(E0A1$Y)
+  p00 <- sum(E0A0$Y)/length(E0A0$Y)
+  rr11 <- p11/p00
+  rr10 <- p10/p00
+  rr01 <- p01/p00
+  RERI <- rr11 - rr10 - rr01 + 1
+  RERIs[i] <- RERI
+}
+summary(RERIs)
+
+length(RERIs[RERIs>0])
+length(RERIs[RERIs<0])
+hist(RERIs)
+
+
+
+##### OTHER HELPFUL CODE THAT MAY BE OF USE LATER #####
 # a and b-----
 
 set.seed(9)
