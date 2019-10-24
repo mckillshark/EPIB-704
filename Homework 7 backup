@@ -1,0 +1,57 @@
+# a)----
+#creating the DAG
+set.seed(500)
+A <- rbinom(5000,1,0.5)
+U <- rbinom(5000,1,0.5)
+L <- ifelse(A==0 & U==0, rbinom(5000,1,0.2),
+            ifelse(A==1 & U==0, rbinom(5000,1,0.4),
+            ifelse(A==0 & U==1, rbinom(5000,1,0.4),
+                   rbinom(5000,1,0.8))))
+C <- ifelse(L==1, rbinom(5000,1,0.25), rbinom(5000,1,0.75))
+Y <- ifelse(U==1, rbinom(5000,1,0.75), rbinom(5000,1,0.25))
+hmwrk7 <- data.frame(A,U,L,C,Y)
+View(hmwrk7)
+
+# b)----
+library(logbin)
+crudeRR1 <- vector("numeric")
+crudeRR2 <- vector("numeric")
+crudeRR3 <- vector("numeric")
+adjustedRR <- vector("numeric")
+set.seed(500) # using the same seed
+for (i in 1:1000) {
+  A <- rbinom(5000,1,0.5)
+  U <- rbinom(5000,1,0.5)
+  L <- ifelse(A==0 & U==0, rbinom(5000,1,0.2),
+              ifelse(A==1 & U==0, rbinom(5000,1,0.4),
+                     ifelse(A==0 & U==1, rbinom(5000,1,0.4),
+                            rbinom(5000,1,0.8))))
+  C <- ifelse(L==1, rbinom(5000,1,0.25), rbinom(5000,1,0.75))
+  Y <- ifelse(U==1, rbinom(5000,1,0.75), rbinom(5000,1,0.25))
+  hmwrk7 <- data.frame(A,U,L,C,Y) # data frame
+  C0L1 <- subset(hmwrk7, C==0 & L==1) # subsetting on first strata
+  RR1 <- (table(C0L1$A,C0L1$Y)[2,2]/(table(C0L1$A,C0L1$Y)[2,1]+table(C0L1$A,C0L1$Y)[2,2]))/
+    (table(C0L1$A,C0L1$Y)[1,2]/(table(C0L1$A,C0L1$Y)[1,1]+table(C0L1$A,C0L1$Y)[1,2]))
+  crudeRR1[i] <- RR1
+  C0L0 <- subset(hmwrk7, C==0 & L==0) # subsetting on second strata
+  RR2 <- (table(C0L0$A,C0L0$Y)[2,2]/(table(C0L0$A,C0L0$Y)[2,1]+table(C0L0$A,C0L0$Y)[2,2]))/
+    (table(C0L0$A,C0L0$Y)[1,2]/(table(C0L0$A,C0L0$Y)[1,1]+table(C0L0$A,C0L0$Y)[1,2]))
+  crudeRR2[i] <- RR2
+  C0 <- subset(hmwrk7, C==0) # subsetting only based on C
+  RR3 <- RR2 <- (table(C0$A,C0$Y)[2,2]/(table(C0$A,C0$Y)[2,1]+table(C0$A,C0$Y)[2,2]))/
+    (table(C0$A,C0$Y)[1,2]/(table(C0$A,C0$Y)[1,1]+table(C0$A,C0$Y)[1,2]))
+  crudeRR3[i] <- RR3
+  logbin <- logbin(C0$Y ~ C0$A + C0$L)
+  adjustedRR[i] <- exp(logbin[[1]][2]) #computing adjusted RR- took forever
+    }
+head(adjustedRR)
+
+summary(logbin)
+logbin[[1]][2]
+
+boxplot(crudeRR1, crudeRR2, crudeRR3, adjustedRR, names = c("Crude1","Crude2","Crude3","Adjusted"),
+        horizontal = TRUE)
+summary(crudeRR1)
+summary(crudeRR2)
+summary(crudeRR3)
+summary(adjustedRR)
